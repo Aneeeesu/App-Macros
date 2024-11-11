@@ -1,21 +1,22 @@
-package com.tenshite.inputmacros.controllers
+package com.tenshite.inputmacros.facades
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.Bundle
 import android.util.Log
+import com.tenshite.inputmacros.MyAccessibilityService
 
-abstract class ShortFormContentControllerBase(service: AccessibilityService) : ControllerBase(service) {
+abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : AppFacadeBase(service) {
     init {
         commands["SwipeDown"] = {SwipeDown()}
         commands["SwipeUp"] = {SwipeUp()}
     }
 
-    override fun ExecuteIntent(commandName: String) {
+    override fun ExecuteIntent(commandName: String, args: Bundle?) {
         if(commands.containsKey(commandName)){
-            super.ExecuteIntent(commandName)
-            commands[commandName]?.invoke()
+            super.ExecuteIntent(commandName,args)
         }
         else
             Log.d("ShortFormContentControllerBase", "Command not found")
@@ -23,10 +24,10 @@ abstract class ShortFormContentControllerBase(service: AccessibilityService) : C
 
 
 
-    open fun SwipeDown(){
+    protected open fun SwipeDown(){
         Log.d("ShortFormContentControllerBase", "SwipeDown")
         val bounds = Rect();
-        service.rootInActiveWindow.getBoundsInScreen(bounds)
+        accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
         val startY = bounds.bottom * 0.75f
@@ -42,12 +43,12 @@ abstract class ShortFormContentControllerBase(service: AccessibilityService) : C
 
         // Dispatch the swipe gesture
 
-        service.dispatchGesture(gesture, null, null)
+        accessibilityService.dispatchGesture(gesture, null, null)
     }
-    fun SwipeUp(){
+    protected open fun SwipeUp(){
         Log.d("ShortFormContentControllerBase", "SwipeUp")
         val bounds = Rect();
-        service.rootInActiveWindow.getBoundsInScreen(bounds)
+        accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
         val startY = bounds.bottom * 0.25f
@@ -63,7 +64,7 @@ abstract class ShortFormContentControllerBase(service: AccessibilityService) : C
 
         // Dispatch the swipe gesture
 
-        service.dispatchGesture(gesture, null, null)
+        accessibilityService.dispatchGesture(gesture, null, null)
     }
 }
 

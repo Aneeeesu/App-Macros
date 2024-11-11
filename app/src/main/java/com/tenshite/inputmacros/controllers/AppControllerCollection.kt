@@ -1,23 +1,22 @@
 package com.tenshite.inputmacros.controllers
 
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.GestureDescription
 import android.content.IntentFilter
-import android.graphics.Path
-import android.graphics.Rect
+import android.os.Bundle
 import android.util.Log
+import com.tenshite.inputmacros.facades.AppFacadeBase
 
 class AppControllerCollection {
-    val controllers = HashMap<String, ControllerBase>();
+    val controllers = HashMap<String, AppFacadeBase>();
 
-    fun AddController(appController: ControllerBase){
+    fun AddController(appController: AppFacadeBase){
         controllers[appController.controllerName] = appController
     }
 
-    fun ExecuteIntent(intent: String){
+    fun ExecuteIntent(intent: String, args: Bundle?){
         val intentDelimited = intent.split(".");
-        if(intentDelimited.count()>1)
+        if(intentDelimited.count()<4)
             throw Exception("Intent must be in format 'controller.action'");
+        controllers[intentDelimited[3]]?.ExecuteIntent(intentDelimited[4],args);
     }
 
     fun getIntentFilter(packageName: String): IntentFilter{

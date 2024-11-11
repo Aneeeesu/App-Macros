@@ -5,34 +5,36 @@ import android.accessibilityservice.GestureDescription
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Path
 import android.graphics.Rect
 import android.util.Log
-import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.tenshite.inputmacros.controllers.AppControllerCollection
-import com.tenshite.inputmacros.controllers.TikTokContentConroller
-import kotlin.math.log
+import com.tenshite.inputmacros.facades.AccessibilityDataExtractor
+import com.tenshite.inputmacros.facades.TikTokContentFacade
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlin.random.Random
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import java.util.Collections
 
 class MyAccessibilityService : AccessibilityService() {
+    var cachedNodesInWindow = listOf<cachedNode>()
+    val eventFlow = MutableSharedFlow<Unit>()
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d("AccessiblityBroadcastReciever:",intent?.action ?: "");
-            if (intent?.action == "com.tenshite.inputmacros.SWIPE_DOWN") {
-                val data = intent.getStringExtra("some_data")
-                //swipeDown()
+            if(intent?.action == "com.tenshite.inputmacros.printScreen"){
+                listAllElements(rootInActiveWindow)
             }
-
-            if (intent?.action == "com.tenshite.inputmacros.CheckAd") {
-                //checkAd()
-            }
+            appControllerCollection.ExecuteIntent(intent?.action ?: "",intent?.extras)
         }
     }
 
-    private val AppControllerCollection = AppControllerCollection()
+    private val appControllerCollection = AppControllerCollection()
 
     private fun checkAd(){
         val rootNode = rootInActiveWindow
@@ -65,34 +67,38 @@ class MyAccessibilityService : AccessibilityService() {
 
     override fun onCreate() {
         super.onCreate()
+        cachedNodesInWindow = Collections.synchronizedList(mutableListOf<cachedNode>())
 
-        AppControllerCollection.AddController(TikTokContentConroller(this))
-        registerReceiver(receiver,AppControllerCollection.getIntentFilter(packageName))
+
+        val job = GlobalScope.launch(Dispatchers.Default) {
+            while(true) {
+                val rootNode = rootInActiveWindow
+                cachedNodesInWindow =
+                    AccessibilityDataExtractor.SelectNodes(rootNode) { true }.map { cachedNode(it) }
+
+                eventFlow.emit(Unit)
+                delay(500);
+            }
+        }
+
+        appControllerCollection.AddController(TikTokContentFacade(this))
+        val filter = appControllerCollection.getIntentFilter(packageName)
+        filter.addAction("com.tenshite.inputmacros.printScreen")
+        registerReceiver(receiver, filter)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            val source = event.source ?: return
-            Toast.makeText(this, "Button pressed", Toast.LENGTH_SHORT).show()
+    }
 
-            // Get button coordinates
-            val location = IntArray(2)
-            val bounds = Rect();
-            source.getBoundsInScreen(bounds);
-
-            val x = bounds.centerX()
-            val y = bounds.centerY()
-
-            Log.d(
-                "AccessibilityService",
-                "Button clicked: ${source.text} pos: ($x, $y)"
-            )
-            Log.d("AccessibilityService","Changes $event.windowChanges");
-            Log.d("AccessibilityService","Window $rootInActiveWindow");
-
-            //showCircleOverlay(x, y)
+    // list all elements in the view
+    private fun listAllElements(node: AccessibilityNodeInfo) {
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            Log.d("AccessibilityService", "Child: $child")
+            listAllElements(child)
         }
     }
+
 
 
     override fun onInterrupt() {
@@ -102,5 +108,41 @@ class MyAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(receiver)
+    }
+
+    fun clickNode(node: cachedNode?) {
+        if (node == null) {
+            return
+        }
+
+        val randomIntInRange = Random.nextInt(5, 15)
+
+        val bounds = node.bounds
+
+        val path = Path().apply {
+            moveTo(
+                bounds.left + Random.nextFloat() * bounds.width(),
+                bounds.top + Random.nextFloat() * bounds.height()
+            )  // Replace x and y with target node coordinates
+        }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, Random.nextLong(110, 160)))
+            .build()
+
+        dispatchGesture(gesture, null, null)
+    }
+}
+
+class cachedNode(node: AccessibilityNodeInfo) {
+    val text = node.text
+    val contentDescription = node.contentDescription
+    val className = node.className
+    val viewId = node.viewIdResourceName
+    val bounds = Rect()
+    val isSelected = node.isSelected
+    val isClickable = node.isClickable
+
+    init {
+        node.getBoundsInScreen(bounds)
     }
 }
