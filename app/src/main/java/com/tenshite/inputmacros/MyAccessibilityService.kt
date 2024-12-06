@@ -13,12 +13,14 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.tenshite.inputmacros.controllers.AppControllerCollection
 import com.tenshite.inputmacros.facades.AccessibilityDataExtractor
+import com.tenshite.inputmacros.facades.NovinkyCZContentfacade
 import com.tenshite.inputmacros.facades.TikTokContentFacade
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlin.random.Random
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.Collections
 
 class MyAccessibilityService : AccessibilityService() {
@@ -82,6 +84,7 @@ class MyAccessibilityService : AccessibilityService() {
         }
 
         appControllerCollection.AddController(TikTokContentFacade(this))
+        appControllerCollection.AddController(NovinkyCZContentfacade(this))
         val filter = appControllerCollection.getIntentFilter(packageName)
         filter.addAction("com.tenshite.inputmacros.printScreen")
         registerReceiver(receiver, filter)

@@ -4,6 +4,8 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.util.Log
 import com.tenshite.inputmacros.facades.AppFacadeBase
+import kotlinx.coroutines.*
+import kotlinx.coroutines.async
 
 class AppControllerCollection {
     val controllers = HashMap<String, AppFacadeBase>();
@@ -16,7 +18,15 @@ class AppControllerCollection {
         val intentDelimited = intent.split(".");
         if(intentDelimited.count()<4)
             throw Exception("Intent must be in format 'controller.action'");
-        controllers[intentDelimited[3]]?.ExecuteIntent(intentDelimited[4],args);
+        Thread {
+            runBlocking {
+                controllers[intentDelimited[3]]?.executeIntent(intentDelimited[4], args);
+            }
+            if(args?.getString("id") != null)
+                Log.d("AppControllerEvent", "${args.getString("id")}");
+            else
+            Log.d("AppControllerEvent", "Intent executed");
+        }.start();
     }
 
     fun getIntentFilter(packageName: String): IntentFilter{

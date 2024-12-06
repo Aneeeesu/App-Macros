@@ -1,16 +1,20 @@
 package com.tenshite.inputmacros.facades
 
-import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.util.Log
-import android.view.accessibility.AccessibilityEvent
 import com.tenshite.inputmacros.MyAccessibilityService
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.util.LinkedList
 import java.util.Queue
-import kotlin.math.log
 
 
 public enum class Screens {
@@ -18,73 +22,7 @@ public enum class Screens {
     Profile,
     Search,
     Messages,
-}
-
-public class TiktokNavigator public constructor(accessibilityService: MyAccessibilityService) :
-    AppNavigator(
-        accessibilityService = accessibilityService,
-        screens = hashMapOf<Int, AppScreen>(
-            Screens.Home.ordinal to AppScreen(
-                Screens.Home.ordinal, listOf(
-                    AppPath(Screens.Profile.ordinal,
-                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == "Profil" }) }),
-                    AppPath(Screens.Messages.ordinal,
-                        {
-                            accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
-                                node.contentDescription != null && node.contentDescription.contains(
-                                    "Doručená"
-                                )
-                            })
-                        }),
-                )
-            ),
-            Screens.Profile.ordinal to AppScreen(
-                Screens.Profile.ordinal, listOf(
-                    AppPath(Screens.Home.ordinal,
-                        {
-                            accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
-                                node.contentDescription != null && node.contentDescription.contains(
-                                    "Domů"
-                                )
-                            })
-                        }),
-                    AppPath(Screens.Messages.ordinal,
-                        {
-                            accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
-                                node.contentDescription != null && node.contentDescription.contains(
-                                    "Doručená"
-                                )
-                            })
-                        }),
-                )
-            ),
-            Screens.Messages.ordinal to AppScreen(
-                Screens.Messages.ordinal, listOf(
-                    AppPath(Screens.Profile.ordinal,
-                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == "Profil" }) }),
-                )
-            )
-
-
-        ), appIntent = "com.zhiliaoapp.musically"
-    ) {
-
-    fun navigateToScreen(screenId: Screens): Deferred<Boolean> {
-        return super.navigateToScreen(screenId.ordinal);
-    }
-
-    override suspend fun getCurrentScreen(): AppScreen? {
-        val rootNode = accessibilityService.rootInActiveWindow
-        if (accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == "Domů" && node.isSelected } != null)
-            return screens[Screens.Home.ordinal]!!
-        if (accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == "Profil" && node.isSelected } != null)
-            return screens[Screens.Profile.ordinal]!!
-        if (accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Doručená") && node.isSelected } != null)
-            return screens[Screens.Messages.ordinal]!!
-
-
-        return null;
-    }
+    DMs,
 }
 
 abstract class AppNavigator(
@@ -96,7 +34,7 @@ abstract class AppNavigator(
     var desiredScreen: Int = -1;
 
     // Collect the flow to wait until both events are triggered
-    private suspend fun waitForScreenChange(filter: () -> Boolean) {
+    suspend fun waitForScreenChange(filter: () -> Boolean) {
         accessibilityService.eventFlow.filter {  filter()
         }.first()
     }

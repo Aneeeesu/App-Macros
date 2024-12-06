@@ -1,16 +1,11 @@
 package com.tenshite.inputmacros.facades
 
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.GestureDescription
-import android.view.accessibility.AccessibilityNodeInfo
-import android.graphics.Path
-import android.graphics.Rect
 import android.os.Bundle
 import com.tenshite.inputmacros.MyAccessibilityService
-import kotlin.random.Random
+import kotlinx.coroutines.*
 
 abstract class AppFacadeBase {
-    val commands = HashMap<String, (Bundle?) -> Unit>()
+    val commands = HashMap<String, suspend (Bundle?) -> Unit>()
 
     protected val accessibilityService: MyAccessibilityService
 
@@ -20,12 +15,22 @@ abstract class AppFacadeBase {
         val map = HashMap<String, String>()
     }
 
+
+    abstract suspend fun GetContentType() : ContentType;
+
     abstract val controllerName: String
 
 
-    open fun ExecuteIntent(commandName: String, args: Bundle?) {
+    open suspend fun executeIntent(commandName: String, args: Bundle?) {
         commands[commandName]?.invoke(args)
     }
 }
 
-
+enum class ContentType
+{
+    Unknown,
+    Video,
+    Image,
+    Text,
+    Ad
+}
