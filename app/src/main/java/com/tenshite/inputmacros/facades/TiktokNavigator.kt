@@ -1,5 +1,6 @@
 package com.tenshite.inputmacros.facades
 
+import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
 import com.tenshite.inputmacros.MyAccessibilityService
 import kotlinx.coroutines.Deferred
 
@@ -18,6 +19,16 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
                                     "Doručená"
                                 )
                             })
+                        }),
+                    AppPath(Screens.Search.ordinal,
+                        {
+                            val filteredNodes =
+                                accessibilityService.cachedNodesInWindow.filter { it.className == "android.widget.ImageView" && it.bounds.top > 0 && it.bounds.right > 0};
+                            val maxValue = filteredNodes.minByOrNull { it.bounds.bottom }?.bounds?.bottom ?: 0
+
+                            filteredNodes.filter { it.bounds.bottom == maxValue }.maxByOrNull { it.bounds.left }?.let {
+                                accessibilityService.clickNode(it)
+                            }
                         }),
                 )
             ),
@@ -41,6 +52,20 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
                         }),
                 )
             ),
+            Screens.Search.ordinal to AppScreen(
+                Screens.Search.ordinal, listOf(
+                    AppPath(Screens.Home.ordinal)
+                        { accessibilityService.performGlobalAction(GLOBAL_ACTION_BACK); },
+                )
+            ),
+
+            Screens.Searched.ordinal to AppScreen(
+                Screens.Searched.ordinal, listOf(
+                    AppPath(Screens.Search.ordinal)
+                    { accessibilityService.performGlobalAction(GLOBAL_ACTION_BACK); },
+                )
+            ),
+
             Screens.Messages.ordinal to AppScreen(
                 Screens.Messages.ordinal, listOf(
                     AppPath(Screens.Profile.ordinal)
@@ -71,9 +96,12 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
             return screens[Screens.Profile.ordinal]!!
         if (nodes.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Doručená") && node.isSelected } != null)
             return screens[Screens.Messages.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && node.text.toString() == "Sdílet příspěvek" } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Zpráva...") || node.text.toString().contains("Sdílet příspěvek")) } != null)
             return screens[Screens.DMs.ordinal]!!
-
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Hledat")) } != null)
+            return screens[Screens.Search.ordinal]!!
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Nejlepší")) } != null)
+            return screens[Screens.Searched.ordinal]!!
         return null;
     }
 }

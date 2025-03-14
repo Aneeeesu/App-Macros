@@ -53,7 +53,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
         }
     }
 
-    override suspend fun GetContentType(): ContentType {
+    override suspend fun getContentType(): ContentType {
         TODO("Not yet implemented")
     }
 
@@ -118,7 +118,6 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
 
 // Wait for the gesture to finish
             latch.await()
-            distanceToSwipe += currentSwipe
         }
     }
 }

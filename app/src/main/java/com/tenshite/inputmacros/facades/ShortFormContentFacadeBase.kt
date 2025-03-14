@@ -9,16 +9,15 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.tenshite.inputmacros.MyAccessibilityService
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
-import kotlin.coroutines.*
 
 abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : AppFacadeBase(service) {
     init {
-        commands["SwipeDown"] = { SwipeDown()}
-        commands["SwipeUp"] = {SwipeUp()}
+        commands["SwipeDown"] = { swipeDown()}
+        commands["SwipeUp"] = {swipeUp()}
     }
 
     override suspend fun executeIntent(commandName: String, args: Bundle?) {
@@ -33,7 +32,7 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
 
 
-    protected open suspend fun SwipeDown(){
+    protected open suspend fun swipeDown(){
         Log.d("ShortFormContentControllerBase", "SwipeDown")
         val bounds = Rect();
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
@@ -52,31 +51,33 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
         // Dispatch the swipe gesture
 
-        // Suspend until the gesture is completed or cancelled
-        return suspendCancellableCoroutine { continuation ->
-            Handler(Looper.getMainLooper()).post {
-                accessibilityService.dispatchGesture(
-                    gesture,
-                    object : AccessibilityService.GestureResultCallback() {
-                        override fun onCompleted(gestureDescription: GestureDescription?) {
-                            if (continuation.isActive) {
-                                continuation.resume(Unit) // Resume coroutine on success
-                            }
-                        }
+        val latch = CountDownLatch(1)
+        Handler(Looper.getMainLooper()).post {
+            accessibilityService.dispatchGesture(
+                gesture,
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        latch.countDown() // Signal that the gesture is complete
+                    }
 
-                        override fun onCancelled(gestureDescription: GestureDescription?) {
-                            if (continuation.isActive) {
-                                continuation.resumeWithException(Exception("Gesture cancelled"))
-                            }
-                        }
-                    },
-                    null
-                )
-            }
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        latch.countDown() // Signal cancellation
+                    }
+                },
+                null
+            )
+
+        }
+
+        // Wait for the gesture to finish
+        withContext(Dispatchers.IO) {
+            latch.await()
+            delay(1000)
+            Log.e("AppControllerEvent","Content=" +  getContentType().toString())
         }
     }
 
-    protected open suspend fun SwipeUp(){
+    protected open suspend fun swipeUp(){
         Log.d("ShortFormContentControllerBase", "SwipeUp")
         val bounds = Rect();
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
@@ -93,29 +94,30 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
         val gesture = gestureBuilder.build()
 
-        // Dispatch the swipe gesture
 
-        // Suspend until the gesture is completed or cancelled
-        return suspendCancellableCoroutine { continuation ->
-            Handler(Looper.getMainLooper()).post {
-                accessibilityService.dispatchGesture(
-                    gesture,
-                    object : AccessibilityService.GestureResultCallback() {
-                        override fun onCompleted(gestureDescription: GestureDescription?) {
-                            if (continuation.isActive) {
-                                continuation.resume(Unit) // Resume coroutine on success
-                            }
-                        }
+        val latch = CountDownLatch(1)
+        Handler(Looper.getMainLooper()).post {
+            accessibilityService.dispatchGesture(
+                gesture,
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        latch.countDown() // Signal that the gesture is complete
+                    }
 
-                        override fun onCancelled(gestureDescription: GestureDescription?) {
-                            if (continuation.isActive) {
-                                continuation.resumeWithException(Exception("Gesture cancelled"))
-                            }
-                        }
-                    },
-                    null
-                )
-            }
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        latch.countDown() // Signal cancellation
+                    }
+                },
+                null
+            )
+
+        }
+
+        // Wait for the gesture to finish
+        withContext(Dispatchers.IO) {
+            latch.await()
+            delay(1000)
+            Log.e("AppControllerEvent","Content=" + getContentType().toString())
         }
     }
 }

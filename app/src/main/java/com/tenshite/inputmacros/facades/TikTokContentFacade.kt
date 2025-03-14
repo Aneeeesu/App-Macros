@@ -1,5 +1,6 @@
 package com.tenshite.inputmacros.facades
 
+import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
@@ -13,27 +14,56 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
     val navigator = TiktokNavigator(accessibilityService = accessibilityService);
 
     init {
-        commands["Like"] = { likeVideo() }
+        commands["Like"] = { likeVideo(); CompletableDeferred(Unit) }
         commands["Comment"] = { Log.d("TiktokClass", "Comment"); CompletableDeferred(Unit) }
         commands["Share"] = { Log.d("TiktokClass", "Share"); CompletableDeferred(Unit) }
         commands["Follow"] = { Log.d("TiktokClass", "Follow"); CompletableDeferred(Unit) }
         commands["Unfollow"] = { Log.d("TiktokClass", "Unfollow"); CompletableDeferred(Unit) }
         commands["NavigateToHome"] = { navigator.navigateToScreen(Screens.Home).await() }
         commands["NavigateToProfile"] = { navigator.navigateToScreen(Screens.Profile).await() }
-        commands["NavigateToSearch"] = { navigator.navigateToScreen(Screens.Search).await() }
         commands["NavigateToMessages"] = { navigator.navigateToScreen(Screens.Messages).await() }
+        commands["NavigateToSearch"] = { navigator.navigateToScreen(Screens.Search).await() }
+        commands["Search"] = { bundle -> search(bundle) }
         commands["OpenDMs"] = { bundle -> openDMs(bundle) }
         commands["SendDM"] = { bundle -> sendDM(bundle) }
     }
 
+    private suspend fun search(bundle: Bundle?){
+        navigator.navigateToScreen(Screens.Search).await()
+        accessibilityService.clickNode(
+            accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className == "android.widget.EditText" }
+        )
+        val arguments = Bundle().apply {
+            putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                bundle?.getString("query")
+            )
+        }
+        AccessibilityDataExtractor.First(
+            accessibilityService.rootInActiveWindow,
+            { node -> node.className == "android.widget.EditText" }
+        )?.let { info ->
+            info.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+        }
+        val seeked = accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.text?.toString() == "Hledat" }
 
-    private fun likeVideo(): Deferred<Unit> {
+        accessibilityService.clickNode(
+            seeked
+        )
+        delay(1000)
+        accessibilityService.clickNode(
+            accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription!= null && node.contentDescription.contains("Video") }
+        )
+        return
+    }
+
+    private fun likeVideo() {
+        Log.d("TikTOk", "likeVideo: liked vid")
         accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
             node.contentDescription != null && node.contentDescription.contains(
                 "ajkov"
-            )
+            ) && node.bounds.top > 0
         });
-        return CompletableDeferred(Unit)
     }
 
     private suspend fun sendDM(bundle: Bundle?) {
@@ -67,6 +97,7 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
         filteredNodes.filter { it.bounds.bottom == maxValue }.maxByOrNull { it.bounds.left }?.let {
             accessibilityService.clickNode(it)
         }
+        accessibilityService.performGlobalAction(GLOBAL_ACTION_BACK);
         return
     }
 
@@ -93,16 +124,20 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
         }.await()
     }
 
-    override suspend fun GetContentType(): ContentType {
+    override suspend fun getContentType(): ContentType {
         if (navigator.getCurrentScreen()?.screenId != Screens.Home.ordinal) {
             return ContentType.Unknown
         }
-        if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Reklama") } != null) {
-            return ContentType.Video
+        if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.text != null && node.text.contains("Reklama") && node.bounds.bottom - node.bounds.top > 0  } != null) {
+            return ContentType.Ad
         }
 
-        if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Foto") } != null) {
+        if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.text != null && node.text.contains("Foto") && node.bounds.bottom - node.bounds.top > 0 } != null) {
             return ContentType.Image
+        }
+
+        if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.text != null && node.text.contains("LIVE now") && node.bounds.bottom - node.bounds.top > 0 } != null) {
+            return ContentType.LiveStream
         }
         return ContentType.Video
     }

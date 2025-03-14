@@ -32,7 +32,12 @@ class MyAccessibilityService : AccessibilityService() {
             if(intent?.action == "com.tenshite.inputmacros.printScreen"){
                 listAllElements(rootInActiveWindow)
             }
-            appControllerCollection.ExecuteIntent(intent?.action ?: "",intent?.extras)
+            try {
+                appControllerCollection.ExecuteIntent(intent?.action ?: "", intent?.extras)
+            }
+            catch (e: Exception){
+                Log.e("AccessibilityService", "Error executing intent", e)
+            }
         }
     }
 
@@ -124,8 +129,8 @@ class MyAccessibilityService : AccessibilityService() {
 
         val path = Path().apply {
             moveTo(
-                bounds.left + Random.nextFloat() * bounds.width(),
-                bounds.top + Random.nextFloat() * bounds.height()
+                bounds.left + (Random.nextFloat()/2 + 0.25f) * bounds.width(),
+                bounds.top + (Random.nextFloat()/2 + 0.25f) * bounds.height()
             )  // Replace x and y with target node coordinates
         }
         val gesture = GestureDescription.Builder()

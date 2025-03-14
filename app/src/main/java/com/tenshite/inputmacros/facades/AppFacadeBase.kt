@@ -16,7 +16,7 @@ abstract class AppFacadeBase {
     }
 
 
-    abstract suspend fun GetContentType() : ContentType;
+    abstract suspend fun getContentType() : ContentType;
 
     abstract val controllerName: String
 
@@ -31,6 +31,7 @@ enum class ContentType
     Unknown,
     Video,
     Image,
+    LiveStream,
     Text,
     Ad
 }
