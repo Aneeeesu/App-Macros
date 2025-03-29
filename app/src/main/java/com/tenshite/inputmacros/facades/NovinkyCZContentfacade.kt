@@ -9,24 +9,28 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
 import com.tenshite.inputmacros.MyAccessibilityService
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sign
 
 class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
     AppFacadeBase(accessibilityService) {
     override val controllerName = "NovinkyCZ"
 
     init {
-//        commands["Open"] = { OpenWebsite() }
-//        commands["FocusAd"] = { FocusAd() }
-//        commands["SwipeDown"] = { Swipe(-200) }
+        commands["Open"] = { OpenWebsite() }
+        commands["FocusAd"] = { FocusAd() }
+        commands["SwipeDown"] = { Swipe(-200) }
     }
 
     private fun OpenWebsite() {
@@ -41,7 +45,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
         }
     }
 
-    private fun FocusAd() {
+    private suspend fun FocusAd() {
 //        val nodes = AccessibilityDataExtractor.SelectNodes(accessibilityService.rootInActiveWindow,
 //            { it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false });
 
@@ -49,7 +53,9 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
             it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false
         }
         if (nodes.isNotEmpty()) {
-            Swipe(nodes.first().bounds.bottom)
+            var closestAd = nodes.minBy { node -> abs(node.bounds.top) }
+
+            Swipe(-1500 + closestAd.bounds.top).await()
         }
     }
 
@@ -58,66 +64,67 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
     }
 
     @Suppress("NAME_SHADOWING")
-    fun Swipe(distanceToSwipe: Int = 100) {
-        var distanceToSwipe = distanceToSwipe
-        Log.d("ShortFormContentControllerBase", "SwipeDown")
-        val bounds = Rect();
-        accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
-        val startX = bounds.centerX().toFloat()
-        val startY = bounds.bottom * 0.2f
-        val endY = bounds.bottom * 0.8f
-        val maxSwipeDistance = endY - startY
+    fun Swipe(distanceToSwipe: Int = 100): Deferred<Unit> =
+        CoroutineScope(Dispatchers.Default).async {
+            var distanceToSwipe = distanceToSwipe
+            Log.d("ShortFormContentControllerBase", "SwipeDown")
+            val bounds = Rect();
+            accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
+            val startX = bounds.centerX().toFloat()
+            val startY = if (distanceToSwipe >= 0) bounds.bottom * 0.8f else (bounds.bottom * 0.2f)
+            var endY = if (distanceToSwipe >= 0) bounds.bottom * 0.2f else bounds.bottom * 0.8f
+            val maxSwipeDistance = endY - startY
 
-        while (distanceToSwipe < 0) {
-            val currentSwipe = max(distanceToSwipe, maxSwipeDistance.toInt())
-            val path = Path()
-            path.moveTo(startX, startY)
-            path.lineTo(startX, startY + currentSwipe)
+            while (distanceToSwipe != 0) {
+                val path = Path()
 
-            val gestureBuilder = GestureDescription.Builder()
-            gestureBuilder.addStroke(
-                GestureDescription.StrokeDescription(
-                    path,
-                    0,
-                    100
-                )
-            ) // Swipe lasts 500 ms
+                val currentSwipe = sign(distanceToSwipe.toFloat()).toInt() * min(abs(distanceToSwipe), abs(maxSwipeDistance.toInt()))
 
-            val pause = Path()
-            pause.moveTo(startX, startY + currentSwipe)
-            pause.lineTo(startX, startY + currentSwipe)
-            gestureBuilder.addStroke(
-                GestureDescription.StrokeDescription(
-                    pause,
-                    0,
-                    100
-                )
-            ) // Swipe lasts 500 ms
+                endY = startY - currentSwipe
 
-            val gesture = gestureBuilder.build()
+                path.moveTo(startX,startY)
+                path.lineTo(startX,endY)
 
-            // Dispatch the swipe gesture
+                val gestureBuilder = GestureDescription.Builder()
+                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 1000)) // Swipe lasts 500 ms
+                val path2 = Path()
+                path2.moveTo(startX,endY)
+                path2.lineTo(startX,endY)
+                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path2, 1010, 200)) // Swipe lasts 500 ms
 
-            val latch = CountDownLatch(1)
-            Handler(Looper.getMainLooper()).post {
-                accessibilityService.dispatchGesture(
-                    gesture,
-                    object : AccessibilityService.GestureResultCallback() {
-                        override fun onCompleted(gestureDescription: GestureDescription?) {
-                            latch.countDown() // Signal that the gesture is complete
-                        }
 
-                        override fun onCancelled(gestureDescription: GestureDescription?) {
-                            latch.countDown() // Signal cancellation
-                        }
-                    },
-                    null
-                )
+                val gesture = gestureBuilder.build()
 
+
+                val latch = CountDownLatch(1)
+                Handler(Looper.getMainLooper()).post {
+                    accessibilityService.dispatchGesture(
+                        gesture,
+                        object : AccessibilityService.GestureResultCallback() {
+                            override fun onCompleted(gestureDescription: GestureDescription?) {
+                                latch.countDown() // Signal that the gesture is complete
+                            }
+
+                            override fun onCancelled(gestureDescription: GestureDescription?) {
+                                latch.countDown() // Signal cancellation
+                            }
+                        },
+                        null
+                    )
+
+                }
+
+                // Wait for the gesture to finish
+                withContext(Dispatchers.IO) {
+                    latch.await()
+                    delay(500)
+                    //Log.e("AppControllerEvent","Content=" + getContentType().toString())
+                }
+
+
+                distanceToSwipe -= currentSwipe
             }
 
-// Wait for the gesture to finish
-            latch.await()
         }
-    }
+
 }

@@ -17,16 +17,6 @@ import java.util.LinkedList
 import java.util.Queue
 
 
-public enum class Screens {
-    Home,
-    Profile,
-    Search,
-    Messages,
-    LiveStreams,
-    Searched,
-    DMs,
-}
-
 abstract class AppNavigator(
     val accessibilityService: MyAccessibilityService,
     val screens: HashMap<Int, AppScreen>,
@@ -37,7 +27,8 @@ abstract class AppNavigator(
 
     // Collect the flow to wait until both events are triggered
     suspend fun waitForScreenChange(filter: () -> Boolean) {
-        accessibilityService.eventFlow.filter {  filter()
+        accessibilityService.eventFlow.filter {
+            filter()
         }.first()
     }
 
@@ -57,7 +48,7 @@ abstract class AppNavigator(
                         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         accessibilityService.startActivity(launchIntent);
                         try {
-                            delay(3000);
+                            delay(10000);
                         } catch (e: TimeoutCancellationException) {
                             isNavigating = false;
                             throw IllegalArgumentException("Navigation timeout")
@@ -68,48 +59,57 @@ abstract class AppNavigator(
                 }
 
 
-                val currentPos: AppScreen?
-                try {
-                    val result = withTimeout(2000) {
-                        currentPos = getCurrentScreen()
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    isNavigating = false;
-                    Log.e("AppNavigator", "screan search Navigation timeout")
-                    throw IllegalArgumentException("Navigation timeout")
-                }
-
-                var retryCounter = 0;
-                while (currentPos == null) {
-                    isNavigating = false;
-                    Log.e("AppNavigator", "currentPos is null")
-                    if (retryCounter > 5) {
-                        throw IllegalArgumentException("Current screen not found")
-                    }
-                    delay(1000);
-                    retryCounter++;
-                }
-
-
-                val path = findPathToScreen(currentPos, screens[screenId]!!)
-                if (path == null) {
-                    isNavigating = false;
-                    Log.e("AppNavigator", "path is null")
-                    throw IllegalArgumentException("Path not found")
-                }
+                var currentPos: AppScreen? = getCurrentScreen()
 
                 try {
-                    for (i in 1 until path.size) {
-                        val action = path[i - 1].getScreenPath(path[i].screenId)
+                    while (currentPos != screens[screenId]!!) {
+                        try {
+                            val result = withTimeout(2000) {
+                                currentPos = getCurrentScreen()
+                            }
+                        } catch (e: TimeoutCancellationException) {
+                            isNavigating = false;
+                            Log.e("AppNavigator", "screan search Navigation timeout")
+                            throw IllegalArgumentException("Navigation timeout")
+                        }
+                        var retryCounter = 0;
+                        while (currentPos == null) {
+                            currentPos = getCurrentScreen()
+                            Log.e("AppNavigator", "currentPos is null")
+                            if (retryCounter > 15) {
+                                isNavigating = false;
+                                throw IllegalArgumentException("Current screen not found")
+                            }
+                            delay(1000);
+                            retryCounter++;
+                        }
+                        if(currentPos?.screenId == screenId)
+                            break
+
+
+                        val path = findPathToScreen(currentPos!!, screens[screenId]!!)
+                        if (path == null) {
+                            isNavigating = false;
+                            Log.e("AppNavigator", "path is null")
+                            throw IllegalArgumentException("Path not found")
+                        }
+
+
+                        val action = path[0].getScreenPath(path[1].screenId)
                             ?: throw IllegalArgumentException("Invalid screen navigationTree")
 
-                        desiredScreen = path[i].screenId;
+                        desiredScreen = path[1].screenId;
                         val res =
-                            async { waitForScreenChange(filter = { runBlocking { getCurrentScreen()?.screenId == desiredScreen } }) };
+                            async {
+                                waitForScreenChange(filter = { runBlocking { getCurrentScreen()?.screenId == desiredScreen } })
+                            }
                         action.invoke()
-
-                        val result = withTimeout(20000) {
-                            res.await();
+                        try {
+                            val result = withTimeout(5000) {
+                                res.await();
+                            }
+                        } catch (e: Exception) {
+                            continue
                         }
                     }
                 } catch (e: Exception) {
@@ -120,7 +120,7 @@ abstract class AppNavigator(
                 Log.d("AppNavigator", "Navigation completed")
                 isNavigating = false;
                 return@async true
-            }catch (e : Exception){
+            } catch (e: Exception) {
                 Log.e("AppNavigator", e.stackTraceToString())
                 isNavigating = false;
                 return@async false

@@ -13,11 +13,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
+import kotlin.math.max
+import kotlin.math.min
 
 abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : AppFacadeBase(service) {
     init {
-        commands["SwipeDown"] = { swipeDown()}
-        commands["SwipeUp"] = {swipeUp()}
+        commands["SwipeDown"] = { bundle ->  swipeDown(bundle)}
+        commands["SwipeUp"] = {bundle ->  swipeUp(bundle)}
     }
 
     override suspend fun executeIntent(commandName: String, args: Bundle?) {
@@ -32,14 +34,23 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
 
 
-    protected open suspend fun swipeDown(){
+    protected open suspend fun swipeDown(bundle: Bundle?){
         Log.d("ShortFormContentControllerBase", "SwipeDown")
         val bounds = Rect();
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
-        val startY = bounds.bottom * 0.75f
-        val endY = bounds.bottom * 0.25f
+
+
+        val startY = bounds.bottom * 0.65f
+        var endY = bounds.bottom * 0.25f
+
+        if(bundle != null && bundle.getFloat("dist") != 0.0f){
+            endY = bounds.bottom * 0.65f - bundle.getFloat("dist")
+        }
+
+        endY = max(bounds.top.toFloat(),endY)
+
 
         path.moveTo(startX,startY)
         path.lineTo(startX,endY)
@@ -71,20 +82,28 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
         // Wait for the gesture to finish
         withContext(Dispatchers.IO) {
+
             latch.await()
             delay(1000)
             Log.e("AppControllerEvent","Content=" +  getContentType().toString())
         }
     }
 
-    protected open suspend fun swipeUp(){
-        Log.d("ShortFormContentControllerBase", "SwipeUp")
+    protected open suspend fun swipeUp(bundle: Bundle?){
         val bounds = Rect();
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
-        val startY = bounds.bottom * 0.25f
-        val endY = bounds.bottom * 0.75f
+
+
+        val startY = bounds.bottom * 0.35f
+        var endY = bounds.bottom * 0.75f
+
+        if(bundle != null && bundle.getFloat("dist") != 0.0f){
+            endY = bounds.bottom * 0.35f + bundle!!.getFloat("dist")
+        }
+
+        endY = max(bounds.top.toFloat(),endY)
 
         path.moveTo(startX,startY)
         path.lineTo(startX,endY)
@@ -116,7 +135,7 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
         // Wait for the gesture to finish
         withContext(Dispatchers.IO) {
             latch.await()
-            delay(1000)
+            delay(300)
             Log.e("AppControllerEvent","Content=" + getContentType().toString())
         }
     }
