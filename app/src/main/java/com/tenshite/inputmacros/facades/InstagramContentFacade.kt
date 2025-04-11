@@ -29,20 +29,24 @@ class InstagramContentFacade(myAccessibilityService: MyAccessibilityService) :
 
     var lastSearchedItem = ""
 
+    override fun getDescription(): String {
+        return ""
+    }
+
     init {
-        commands["Like"] = { likeVideo(); CompletableDeferred(Unit) }
+        commands["Like"] = { likeVideo(); "" }
 //            commands["Comment"] = { Log.d("TiktokClass", "Comment"); CompletableDeferred(Unit) }
 //            commands["Share"] = { Log.d("TiktokClass", "Share"); CompletableDeferred(Unit) }
 //            commands["Follow"] = { Log.d("TiktokClass", "Follow"); CompletableDeferred(Unit) }
 //            commands["Unfollow"] = { Log.d("TiktokClass", "Unfollow"); CompletableDeferred(Unit) }
         commands["NavigateToHome"] =
-            { navigator.navigateToScreen(InstagramNavigator.Screens.Home).await() }
+            { navigator.navigateToScreen(InstagramNavigator.Screens.Home).await();"" }
         commands["NavigateToProfile"] =
-            { navigator.navigateToScreen(InstagramNavigator.Screens.Profile).await() }
+            { navigator.navigateToScreen(InstagramNavigator.Screens.Profile).await();"" }
         commands["NavigateToReels"] =
-            { navigator.navigateToScreen(InstagramNavigator.Screens.Reels).await() }
+            { navigator.navigateToScreen(InstagramNavigator.Screens.Reels).await();"" }
         commands["NavigateToSearch"] =
-            { navigator.navigateToScreen(InstagramNavigator.Screens.Search).await() }
+            { navigator.navigateToScreen(InstagramNavigator.Screens.Search).await();"" }
 //            commands["Search"] = { bundle -> search(bundle) }
 //            commands["OpenDMs"] = { bundle -> openDMs(bundle) }
 //            commands["SendDM"] = { bundle -> sendDM(bundle) }

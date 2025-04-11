@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.PowerManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -27,6 +28,8 @@ import java.util.Collections
 
 class MyAccessibilityService : AccessibilityService() {
     var cachedNodesInWindow = listOf<cachedNode>()
+    var currentPackageName : String? = null
+    var screenBounds : Rect = Rect()
     val eventFlow = MutableSharedFlow<Unit>()
 
     private val receiver = object : BroadcastReceiver() {
@@ -34,6 +37,24 @@ class MyAccessibilityService : AccessibilityService() {
             if(intent?.action == "com.tenshite.inputmacros.printScreen"){
                 listAllElements(rootInActiveWindow)
             }
+            if(intent?.action == "com.tenshite.inputmacros.wakeup"){
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                val wakeLock = powerManager.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    "MyApp:WakeLock"
+                )
+                wakeLock.acquire(60 * 1000L) // Keeps screen on for a minute
+                try {
+                    appControllerCollection.ExecuteIntent(
+                        "com.tenshite.inputmacros.TikTok.SwipeDown",
+                        null
+                    )
+                }
+                catch (e: Exception){
+                    Log.e("AccessibilityService", "Error executing intent", e)
+                }
+            }
+
             try {
                 appControllerCollection.ExecuteIntent(intent?.action ?: "", intent?.extras)
             }
@@ -84,9 +105,11 @@ class MyAccessibilityService : AccessibilityService() {
                 val rootNode = rootInActiveWindow
                 cachedNodesInWindow =
                     AccessibilityDataExtractor.SelectNodes(rootNode) { true }.map { cachedNode(it) }
+                currentPackageName = rootInActiveWindow?.packageName.toString()
+                rootInActiveWindow?.getBoundsInScreen(screenBounds)
 
                 eventFlow.emit(Unit)
-                delay(500);
+                delay(200);
             }
         }
 
@@ -95,7 +118,12 @@ class MyAccessibilityService : AccessibilityService() {
         appControllerCollection.AddController(NovinkyCZContentfacade(this))
         val filter = appControllerCollection.getIntentFilter(packageName)
         filter.addAction("com.tenshite.inputmacros.printScreen")
-        registerReceiver(receiver, filter)
+        filter.addAction("com.tenshite.inputmacros.wakeup")
+        registerReceiver(
+            receiver,
+            filter,
+            Context.RECEIVER_EXPORTED
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -152,6 +180,9 @@ class cachedNode(node: AccessibilityNodeInfo) {
     val bounds = Rect()
     val isSelected = node.isSelected
     val isClickable = node.isClickable
+    fun InBounds() : Boolean{
+        return bounds.top >= 0 &&  bounds.bottom < 2400 && bounds.left>=0 && bounds.right < 1080
+    }
 
     init {
         node.getBoundsInScreen(bounds)

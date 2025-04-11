@@ -5,7 +5,7 @@ import com.tenshite.inputmacros.MyAccessibilityService
 import kotlinx.coroutines.*
 
 abstract class AppFacadeBase {
-    val commands = HashMap<String, suspend (Bundle?) -> Unit>()
+    val commands = HashMap<String, suspend (Bundle?) -> String>()
 
     protected val accessibilityService: MyAccessibilityService
 
@@ -21,8 +21,8 @@ abstract class AppFacadeBase {
     abstract val controllerName: String
 
 
-    open suspend fun executeIntent(commandName: String, args: Bundle?) {
-        commands[commandName]?.invoke(args)
+    open suspend fun executeIntent(commandName: String, args: Bundle?) : String {
+        return commands[commandName]?.invoke(args) ?: ""
     }
 }
 

@@ -16,18 +16,18 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
     var lastSearchedItem = ""
 
     init {
-        commands["Like"] = { likeVideo(); CompletableDeferred(Unit) }
-        commands["Comment"] = { Log.d("TiktokClass", "Comment"); CompletableDeferred(Unit) }
-        commands["Share"] = { Log.d("TiktokClass", "Share"); CompletableDeferred(Unit) }
-        commands["Follow"] = { Log.d("TiktokClass", "Follow"); CompletableDeferred(Unit) }
-        commands["Unfollow"] = { Log.d("TiktokClass", "Unfollow"); CompletableDeferred(Unit) }
-        commands["NavigateToHome"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Home).await() }
-        commands["NavigateToProfile"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Profile).await() }
-        commands["NavigateToMessages"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Messages).await() }
-        commands["NavigateToSearch"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Search).await() }
-        commands["Search"] = { bundle -> search(bundle) }
-        commands["OpenDMs"] = { bundle -> openDMs(bundle) }
-        commands["SendDM"] = { bundle -> sendDM(bundle) }
+        commands["Like"] = { likeVideo(); "" }
+        commands["Comment"] = { Log.d("TiktokClass", "Comment"); "" }
+        commands["Share"] = { Log.d("TiktokClass", "Share"); "" }
+        commands["Follow"] = { Log.d("TiktokClass", "Follow"); "" }
+        commands["Unfollow"] = { Log.d("TiktokClass", "Unfollow"); "" }
+        commands["NavigateToHome"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Home).await();"" }
+        commands["NavigateToProfile"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Profile).await(); "" }
+        commands["NavigateToMessages"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Messages).await();"" }
+        commands["NavigateToSearch"] = { navigator.navigateToScreen(TiktokNavigator.Screens.Search).await();"" }
+        commands["Search"] = { bundle -> search(bundle);"" }
+        commands["OpenDMs"] = { bundle -> openDMs(bundle);"" }
+        commands["SendDM"] = { bundle -> sendDM(bundle);"" }
     }
 
     private suspend fun search(bundle: Bundle?){
@@ -126,10 +126,10 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
             val res =
                 async { navigator.waitForScreenChange(filter = { runBlocking { navigator.getCurrentScreen()?.screenId == TiktokNavigator.Screens.DMs.ordinal } }) };
             accessibilityService.clickNode(
-                accessibilityService.cachedNodesInWindow.firstOrNull { node ->
-                    node.text != null && node.text.contains(
+                accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.InBounds() &&
+                    node.text != null && node.text.toString() ==
                         bundle.getString("username")!!
-                    )
+
                 }
             )
         val result = withTimeout(20000) {
@@ -138,8 +138,16 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
         }.await()
     }
 
+    override fun getDescription(): String {
+        val desiredNode = accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className.toString() == "com.bytedance.tux.input.TuxTextLayoutView" && node.bounds.bottom - node.bounds.top > 0  }
+
+        if(desiredNode != null)
+            return desiredNode.text.toString()
+        return ""
+    }
+
     override suspend fun getContentType(): ContentType {
-        if (navigator.getCurrentScreen()?.screenId != TiktokNavigator.Screens.Home.ordinal || navigator.getCurrentScreen()?.screenId != TiktokNavigator.Screens.ScrollingSearched.ordinal) {
+        if (navigator.getCurrentScreen()?.screenId != TiktokNavigator.Screens.Home.ordinal && navigator.getCurrentScreen()?.screenId != TiktokNavigator.Screens.ScrollingSearched.ordinal) {
             return ContentType.Unknown
         }
         if(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.text != null && node.text.contains("Reklama") && node.bounds.bottom - node.bounds.top > 0  } != null) {

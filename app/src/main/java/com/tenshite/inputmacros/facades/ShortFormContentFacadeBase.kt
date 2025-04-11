@@ -18,26 +18,32 @@ import kotlin.math.min
 
 abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : AppFacadeBase(service) {
     init {
-        commands["SwipeDown"] = { bundle ->  swipeDown(bundle)}
-        commands["SwipeUp"] = {bundle ->  swipeUp(bundle)}
-    }
-
-    override suspend fun executeIntent(commandName: String, args: Bundle?) {
-        if(commands.containsKey(commandName)){
-            super.executeIntent(commandName,args)
+        commands["SwipeDown"] = { bundle -> val pair =  swipeDown(bundle); pair.first + " " + pair.second}
+        commands["SwipeUp"] = {bundle ->
+            val pair = swipeUp(bundle)
+            pair.first + " " + pair.second
         }
-        else
+    }
+
+    override suspend fun executeIntent(commandName: String, args: Bundle?) : String {
+        var returnVal = ""
+        if(commands.containsKey(commandName)){
+            returnVal = super.executeIntent(commandName,args)
+        }
+        else {
             Log.d("ShortFormContentControllerBase", "Command not found")
+        }
+        return returnVal
     }
 
 
 
 
 
-    protected open suspend fun swipeDown(bundle: Bundle?){
+    protected open suspend fun swipeDown(bundle: Bundle?) : Pair<String,String> {
         Log.d("ShortFormContentControllerBase", "SwipeDown")
         val bounds = Rect();
-        accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
+        bounds.set(accessibilityService.screenBounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
 
@@ -85,11 +91,13 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
             latch.await()
             delay(1000)
-            Log.e("AppControllerEvent","Content=" +  getContentType().toString())
         }
+        return Pair(getContentType().toString(),getDescription());
     }
 
-    protected open suspend fun swipeUp(bundle: Bundle?){
+    protected abstract fun getDescription() : String
+
+    protected open suspend fun swipeUp(bundle: Bundle?) : Pair<String,String> {
         val bounds = Rect();
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
@@ -136,8 +144,8 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
         withContext(Dispatchers.IO) {
             latch.await()
             delay(300)
-            Log.e("AppControllerEvent","Content=" + getContentType().toString())
         }
+        return Pair(getContentType().toString(),getDescription());
     }
 }
 

@@ -116,7 +116,7 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
 
     override suspend fun getCurrentScreen(): AppScreen? {
         val nodes = accessibilityService.cachedNodesInWindow
-        if((accessibilityService.rootInActiveWindow.packageName != appIntent))
+        if((accessibilityService.currentPackageName != appIntent))
             return null
 
         if (nodes.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == "Domů" && node.isSelected } != null)

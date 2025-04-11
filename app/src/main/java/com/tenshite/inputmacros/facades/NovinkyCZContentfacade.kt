@@ -28,9 +28,9 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
     override val controllerName = "NovinkyCZ"
 
     init {
-        commands["Open"] = { OpenWebsite() }
-        commands["FocusAd"] = { FocusAd() }
-        commands["SwipeDown"] = { Swipe(-200) }
+        commands["Open"] = { OpenWebsite(); "" }
+        commands["FocusAd"] = { FocusAd().toString() }
+        commands["SwipeDown"] = { Swipe(-200); "" }
     }
 
     private fun OpenWebsite() {
@@ -45,7 +45,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
         }
     }
 
-    private suspend fun FocusAd() {
+    private suspend fun FocusAd() : Boolean {
 //        val nodes = AccessibilityDataExtractor.SelectNodes(accessibilityService.rootInActiveWindow,
 //            { it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false });
 
@@ -53,10 +53,18 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
             it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false
         }
         if (nodes.isNotEmpty()) {
-            var closestAd = nodes.minBy { node -> abs(node.bounds.top) }
+            val screenBounds = accessibilityService.screenBounds
+            val validNodes = nodes.filter{node->node.bounds.top > screenBounds.bottom};
+            if(validNodes.isEmpty())
+                return false
+            val nextAd = validNodes.minBy { node -> abs(node.bounds.top) }
 
-            Swipe(-1500 + closestAd.bounds.top).await()
+            val distanceToSwipe = -screenBounds.bottom * 0.5 + nextAd.bounds.top
+            if(abs(distanceToSwipe) > 200)
+                Swipe((-screenBounds.bottom * 0.5 + nextAd.bounds.top).toInt()).await()
+            return true
         }
+        return false
     }
 
     override suspend fun getContentType(): ContentType {
@@ -75,7 +83,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
             var endY = if (distanceToSwipe >= 0) bounds.bottom * 0.2f else bounds.bottom * 0.8f
             val maxSwipeDistance = endY - startY
 
-            while (distanceToSwipe != 0) {
+            while (abs(distanceToSwipe) > 300) {
                 val path = Path()
 
                 val currentSwipe = sign(distanceToSwipe.toFloat()).toInt() * min(abs(distanceToSwipe), abs(maxSwipeDistance.toInt()))
@@ -84,13 +92,14 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
 
                 path.moveTo(startX,startY)
                 path.lineTo(startX,endY)
+                path.lineTo(startX,endY+1)
 
                 val gestureBuilder = GestureDescription.Builder()
-                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 1000)) // Swipe lasts 500 ms
-                val path2 = Path()
-                path2.moveTo(startX,endY)
-                path2.lineTo(startX,endY)
-                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path2, 1010, 200)) // Swipe lasts 500 ms
+                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 2000)) // Swipe lasts 500 ms
+//                val path2 = Path()
+//                path2.moveTo(startX,endY)
+//                path2.lineTo(startX,endY)
+//                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path2, 2001, 200)) // Swipe lasts 500 ms
 
 
                 val gesture = gestureBuilder.build()
@@ -116,8 +125,8 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
 
                 // Wait for the gesture to finish
                 withContext(Dispatchers.IO) {
+                    delay(2500)
                     latch.await()
-                    delay(500)
                     //Log.e("AppControllerEvent","Content=" + getContentType().toString())
                 }
 

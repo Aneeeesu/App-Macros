@@ -40,7 +40,7 @@ abstract class AppNavigator(
                 isNavigating = true
 
                 //if screen is null open tiktok
-                if (accessibilityService.rootInActiveWindow.packageName != appIntent) {
+                if (accessibilityService.currentPackageName != appIntent) {
                     //open tiktok
                     val launchIntent =
                         accessibilityService.packageManager.getLaunchIntentForPackage(appIntent)

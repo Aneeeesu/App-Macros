@@ -19,11 +19,12 @@ class AppControllerCollection {
         if(intentDelimited.count()<4)
             throw Exception("Intent must be in format 'controller.action'");
         Thread {
+            var returnValues = ""
             runBlocking {
-                controllers[intentDelimited[3]]?.executeIntent(intentDelimited[4], args);
+                returnValues = controllers[intentDelimited[3]]?.executeIntent(intentDelimited[4], args) ?: "";
             }
             if(args?.getString("id") != null)
-                Log.d("AppControllerEvent", "${args.getString("id")}");
+                Log.d("AppControllerEvent", "${args.getString("id")} $returnValues");
             else
             Log.d("AppControllerEvent", "Intent executed");
         }.start();
