@@ -33,7 +33,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
         commands["SwipeDown"] = { Swipe(-200); "" }
     }
 
-    private fun OpenWebsite() {
+    private suspend fun OpenWebsite() {
         //launch intent with website
         val intent = Intent(Intent.ACTION_VIEW).apply { data = Uri.parse("https://www.novinky.cz") }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -43,25 +43,32 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
             // Handle case where no app can handle the intent
             Log.e("NovinkyCZContentFacade", "No app can handle this intent")
         }
+        delay(1000)
     }
 
     private suspend fun FocusAd() : Boolean {
 //        val nodes = AccessibilityDataExtractor.SelectNodes(accessibilityService.rootInActiveWindow,
 //            { it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false });
 
-        val nodes = accessibilityService.cachedNodesInWindow.filter {
+        delay(1000)
+        var nodes = accessibilityService.cachedNodesInWindow.filter {
             it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false
         }
         if (nodes.isNotEmpty()) {
-            val screenBounds = accessibilityService.screenBounds
-            val validNodes = nodes.filter{node->node.bounds.top > screenBounds.bottom};
-            if(validNodes.isEmpty())
-                return false
-            val nextAd = validNodes.minBy { node -> abs(node.bounds.top) }
+            do {
+                nodes = accessibilityService.cachedNodesInWindow.filter {
+                    it.contentDescription?.toString()?.lowercase()?.contains("reklama") ?: false
+                }
+                val screenBounds = accessibilityService.screenBounds
+                val validNodes = nodes.filter { node -> node.bounds.top > screenBounds.bottom };
+                if (validNodes.isEmpty())
+                    return false
+                val nextAd = validNodes.minBy { node -> abs(node.bounds.top) }
 
-            val distanceToSwipe = -screenBounds.bottom * 0.5 + nextAd.bounds.top
-            if(abs(distanceToSwipe) > 200)
-                Swipe((-screenBounds.bottom * 0.5 + nextAd.bounds.top).toInt()).await()
+                val distanceToSwipe = -screenBounds.bottom * 0.5 + nextAd.bounds.top
+                if (abs(distanceToSwipe) > 200)
+                    Swipe(min(distanceToSwipe.toInt(),screenBounds.bottom*2)).await()
+            }while (abs(distanceToSwipe) > screenBounds.bottom*2)
             return true
         }
         return false
@@ -92,14 +99,14 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
 
                 path.moveTo(startX,startY)
                 path.lineTo(startX,endY)
-                path.lineTo(startX,endY+1)
+                path.lineTo(startX,endY-1)
 
                 val gestureBuilder = GestureDescription.Builder()
-                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 2000)) // Swipe lasts 500 ms
-//                val path2 = Path()
-//                path2.moveTo(startX,endY)
-//                path2.lineTo(startX,endY)
-//                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path2, 2001, 200)) // Swipe lasts 500 ms
+                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 100)) // Swipe lasts 500 ms
+                val path2 = Path()
+                path2.moveTo(startX,endY)
+                path2.lineTo(startX,endY)
+                gestureBuilder.addStroke(GestureDescription.StrokeDescription(path2, 101, 100)) // Swipe lasts 500 ms
 
 
                 val gesture = gestureBuilder.build()
@@ -125,7 +132,7 @@ class NovinkyCZContentfacade(accessibilityService: MyAccessibilityService) :
 
                 // Wait for the gesture to finish
                 withContext(Dispatchers.IO) {
-                    delay(2500)
+                    delay(1200)
                     latch.await()
                     //Log.e("AppControllerEvent","Content=" + getContentType().toString())
                 }

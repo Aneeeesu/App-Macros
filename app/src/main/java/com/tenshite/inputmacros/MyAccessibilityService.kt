@@ -45,10 +45,13 @@ class MyAccessibilityService : AccessibilityService() {
                 )
                 wakeLock.acquire(60 * 1000L) // Keeps screen on for a minute
                 try {
-                    appControllerCollection.ExecuteIntent(
-                        "com.tenshite.inputmacros.TikTok.SwipeDown",
-                        null
-                    )
+                    runBlocking {
+                        delay(1000)
+                        appControllerCollection.ExecuteIntent(
+                            "com.tenshite.inputmacros.TikTok.SwipeDown",
+                            null
+                        )
+                    }
                 }
                 catch (e: Exception){
                     Log.e("AccessibilityService", "Error executing intent", e)
@@ -160,8 +163,8 @@ class MyAccessibilityService : AccessibilityService() {
 
         val path = Path().apply {
             moveTo(
-                bounds.left + (Random.nextFloat()/2 + 0.25f) * bounds.width(),
-                bounds.top + (Random.nextFloat()/2 + 0.25f) * bounds.height()
+                bounds.left + (Random.nextFloat()/4) * bounds.width()/2,
+                bounds.top + (Random.nextFloat()/4) * bounds.height()/2
             )  // Replace x and y with target node coordinates
         }
         val gesture = GestureDescription.Builder()

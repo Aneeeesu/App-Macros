@@ -20,7 +20,7 @@ class AppControllerCollection {
             throw Exception("Intent must be in format 'controller.action'");
         Thread {
             var returnValues = ""
-            runBlocking {
+             runBlocking {
                 returnValues = controllers[intentDelimited[3]]?.executeIntent(intentDelimited[4], args) ?: "";
             }
             if(args?.getString("id") != null)

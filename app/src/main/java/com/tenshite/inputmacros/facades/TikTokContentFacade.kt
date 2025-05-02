@@ -83,26 +83,26 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
             Log.d("TiktokClass", "SendDM: message not provided")
             return
         }
-        delay(500);
+        delay(2000);
         accessibilityService.clickNode(
             accessibilityService.cachedNodesInWindow.firstOrNull { node ->
                 node.className == "android.widget.EditText"
             })
-        delay(500);
+        delay(2000);
         val arguments = Bundle().apply {
             putCharSequence(
                 AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
                 bundle.getString("message")
             )
         }
-        delay(500);
+        delay(2000);
         AccessibilityDataExtractor.First(
             accessibilityService.rootInActiveWindow,
             { node -> node.className == "android.widget.EditText" }
         )?.let { info ->
             info.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
         }
-        delay(1000);
+        delay(2000);
 
         val filteredNodes =
             accessibilityService.cachedNodesInWindow.filter { it.className == "android.widget.ImageView" };
@@ -139,10 +139,16 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
     }
 
     override fun getDescription(): String {
-        val desiredNode = accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className.toString() == "com.bytedance.tux.input.TuxTextLayoutView" && node.bounds.bottom - node.bounds.top > 0  }
+        try {
+            val desiredNode =
+                accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.className.toString() == "com.bytedance.tux.input.TuxTextLayoutView" && node.bounds.bottom - node.bounds.top > 0 }
 
-        if(desiredNode != null)
-            return desiredNode.text.toString()
+            if (desiredNode != null)
+                return desiredNode.text.toString()
+        }
+        catch (e : Exception){
+            return ""
+        }
         return ""
     }
 
