@@ -13,12 +13,12 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
             Screens.Home.ordinal to AppScreen(
                 Screens.Home.ordinal, listOf(
                     AppPath(Screens.Profile.ordinal,
-                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == "Profil" }) }),
+                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == PROFILE_CONST }) }),
                     AppPath(Screens.Messages.ordinal,
                         {
                             accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
                                 node.contentDescription != null && node.contentDescription.contains(
-                                    "Doručená"
+                                    MESSAGES_CONST
                                 )
                             })
                         }),
@@ -40,7 +40,7 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
                         {
                             accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
                                 node.contentDescription != null && node.contentDescription.contains(
-                                    "Domů"
+                                    HOME_CONST
                                 )
                             })
                         }),
@@ -48,7 +48,7 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
                         {
                             accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
                                 node.contentDescription != null && node.contentDescription.contains(
-                                    "Doručená"
+                                    MESSAGES_CONST
                                 )
                             })
                         }),
@@ -71,9 +71,9 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
             Screens.Messages.ordinal to AppScreen(
                 Screens.Messages.ordinal, listOf(
                     AppPath(Screens.Profile.ordinal)
-                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == "Profil"}) },
+                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription == PROFILE_CONST}) },
                     AppPath(Screens.Home.ordinal)
-                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Domů")}) },
+                        { accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains(HOME_CONST)}) },
                 )
             ),
             Screens.DMs.ordinal to AppScreen(
@@ -97,6 +97,23 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
         ), appIntent = "com.zhiliaoapp.musically"
     ) {
 
+    companion object {
+        val PROFILE_CONST = "Profil"
+        val HOME_CONST = "Domů"
+        val SEARCH_CONST = "Hledat"
+        val SEARCHED_CONST = "Nejlepší"
+        val MESSAGES_CONST = "Doručená"
+        val IN_DM_MESSAGE_CONST = "Zpráva..."
+        val IN_DM_SHARE_CONST = "Sdílet příspěvek"
+        val IN_DM_SEND_CONST = "Poslat"
+        val SROLLING_SEACH_CONST = "Sledovat"
+        val SCROLLING_SEARCH_ALTERNATIVE_CONST = "Sledovat už"
+        val SCROLLING_SEARCH_ALTERNATIVE2_CONST = "Hled"
+        val SEACHED_LIVES_CONST = "Psát..."
+        val LIKE_CONST = "ajkov"
+    }
+
+
     fun navigateToScreen(screenId: Screens): Deferred<Boolean> {
         return super.navigateToScreen(screenId.ordinal);
     }
@@ -119,26 +136,26 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
         if((accessibilityService.currentPackageName != appIntent))
             return null
 
-        if (nodes.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == "Domů" && node.isSelected } != null)
+        if (nodes.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == HOME_CONST && node.isSelected } != null)
             return screens[Screens.Home.ordinal]!!
-        if (nodes.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == "Profil" && node.isSelected } != null)
+        if (nodes.firstOrNull { node -> node.className == "android.widget.FrameLayout" && node.contentDescription == PROFILE_CONST && node.isSelected } != null)
             return screens[Screens.Profile.ordinal]!!
-        if (nodes.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains("Doručená") && node.isSelected } != null)
+        if (nodes.firstOrNull { node -> node.contentDescription != null && node.contentDescription.contains(SEARCHED_CONST) && node.isSelected } != null)
             return screens[Screens.Messages.ordinal]!!
         if(nodes.firstOrNull {
-            node -> node.text != null && (node.text.toString().contains("Zpráva...") || node.text.toString().contains("Sdílet příspěvek")) ||
-                    node.contentDescription != null && node.contentDescription.toString().contains("Poslat")
+            node -> node.text != null && (node.text.toString().contains(IN_DM_MESSAGE_CONST) || node.text.toString().contains(IN_DM_SHARE_CONST)) ||
+                    node.contentDescription != null && node.contentDescription.toString().contains(IN_DM_SEND_CONST)
         } != null)
             return screens[Screens.DMs.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Hledat")) } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SEARCH_CONST)) } != null)
             return screens[Screens.Search.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Nejlepší")) } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SEARCHED_CONST)) } != null)
             return screens[Screens.Searched.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Sledovat") && !node.text.toString().contains("Sledovat už")) } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SROLLING_SEACH_CONST) && !node.text.toString().contains(SCROLLING_SEARCH_ALTERNATIVE_CONST)) } != null)
             return screens[Screens.ScrollingSearched.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Hled")) } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SCROLLING_SEARCH_ALTERNATIVE2_CONST)) } != null)
             return screens[Screens.ScrollingSearched.ordinal]!!
-        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains("Psát...")) } != null)
+        if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SEACHED_LIVES_CONST)) } != null)
             return screens[Screens.SearchedLives.ordinal]!!
         return null;
     }

@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.text.TextUtils
+import android.widget.Button
+import android.widget.TextView
 
 
 class MainActivity : AppCompatActivity() {
@@ -37,17 +39,31 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    override fun onResume() {
+        super.onResume()
+
+        val textView = findViewById<TextView>(R.id.text)
+        if(isAccessibilityServiceEnabled(this, MyAccessibilityService::class.java.name)){
+            textView.text = "Vše připraveno"
+        }
+        else{
+            textView.text= "Zapnětě službu zpřístupnění pro tuto aplikaci\n\nV záložce se staženými službami vyberte tuto aplikaci\n Doporučuji zapnout i tlačtítko spojené s touto službou"
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        val button = findViewById<Button>(R.id.SettingsButton)
+        button.setOnClickListener {
+            promptUserToEnableAccessibility(this)
+        }
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
-        }
-        if (!isAccessibilityServiceEnabled(this, MyAccessibilityService::class.java.name)) {
-            promptUserToEnableAccessibility(this)
         }
     }
 }

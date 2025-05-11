@@ -70,10 +70,10 @@ class TikTokContentFacade(accessibilityService: MyAccessibilityService) :
     }
 
     private fun likeVideo() {
-        Log.d("TikTOk", "likeVideo: liked vid")
+        Log.d("TikTok", "likeVideo: liked vid")
         accessibilityService.clickNode(accessibilityService.cachedNodesInWindow.firstOrNull { node ->
             node.contentDescription != null && node.contentDescription.contains(
-                "ajkov"
+                TiktokNavigator.LIKE_CONST
             ) && node.bounds.top > 0
         });
     }
