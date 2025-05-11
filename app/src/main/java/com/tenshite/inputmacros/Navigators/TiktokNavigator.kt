@@ -1,4 +1,4 @@
-package com.tenshite.inputmacros.facades
+package com.tenshite.inputmacros.Navigators
 
 import android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
 import com.tenshite.inputmacros.MyAccessibilityService
@@ -6,9 +6,16 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
-public class TiktokNavigator public constructor(accessibilityService: MyAccessibilityService) :
+/**
+ * Provides navigation for Tiktok controller.
+ * @param accessibilityService The accessibility service used for interacting with the OS.
+ */
+class TiktokNavigator(accessibilityService: MyAccessibilityService) :
     AppNavigator(
+        // Pass the accessibility service to the parent class
         accessibilityService = accessibilityService,
+
+        // HashMap of screens and paths to them respective paths
         screens = hashMapOf<Int, AppScreen>(
             Screens.Home.ordinal to AppScreen(
                 Screens.Home.ordinal, listOf(
@@ -25,7 +32,7 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
                     AppPath(Screens.Search.ordinal,
                         {
                             val filteredNodes =
-                                accessibilityService.cachedNodesInWindow.filter { it.className == "android.widget.ImageView" && it.bounds.top > 0 && it.bounds.right > 0};
+                                accessibilityService.cachedNodesInWindow.filter { it.className == "android.widget.ImageView" && it.bounds.top > 0 && it.bounds.right > 0}
                             val maxValue = filteredNodes.minByOrNull { it.bounds.bottom }?.bounds?.bottom ?: 0
 
                             filteredNodes.filter { it.bounds.bottom == maxValue }.maxByOrNull { it.bounds.left }?.let {
@@ -97,6 +104,9 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
         ), appIntent = "com.zhiliaoapp.musically"
     ) {
 
+    /**
+     * Constants for Tiktok.
+     */
     companion object {
         val PROFILE_CONST = "Profil"
         val HOME_CONST = "Domů"
@@ -114,23 +124,33 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
     }
 
 
+    /**
+     * Navigates to the specified screen.
+     * @param screenId The screen to navigate to.
+     * @return A Deferred object that will be completed when the navigation is done.
+     */
     fun navigateToScreen(screenId: Screens): Deferred<Boolean> {
-        return super.navigateToScreen(screenId.ordinal);
+        return super.navigateToScreen(screenId.ordinal)
     }
 
-    public enum class Screens {
-        None,
+    /**
+     * Enum class representing the screens in the app.
+     */
+    enum class Screens {
         Home,
         Profile,
         Search,
         Messages,
-        LiveStreams,
         Searched,
         ScrollingSearched,
         SearchedLives,
         DMs,
     }
 
+    /**
+     * Returns the current screen of the app.
+     * @return The current screen of the app, or null if not found.
+     */
     override suspend fun getCurrentScreen(): AppScreen? {
         val nodes = accessibilityService.cachedNodesInWindow
         if((accessibilityService.currentPackageName != appIntent))
@@ -157,6 +177,6 @@ public class TiktokNavigator public constructor(accessibilityService: MyAccessib
             return screens[Screens.ScrollingSearched.ordinal]!!
         if(nodes.firstOrNull { node -> node.text != null && (node.text.toString().contains(SEACHED_LIVES_CONST)) } != null)
             return screens[Screens.SearchedLives.ordinal]!!
-        return null;
+        return null
     }
 }

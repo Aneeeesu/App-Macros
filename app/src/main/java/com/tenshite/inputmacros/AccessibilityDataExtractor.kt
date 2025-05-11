@@ -1,9 +1,20 @@
-package com.tenshite.inputmacros.facades
+package com.tenshite.inputmacros
 
 import android.view.accessibility.AccessibilityNodeInfo
 
+/**
+ * A utility class for extracting data from accessibility nodes.
+ * It provides methods to find the first node that matches a condition and to select all nodes that match a condition.
+ */
 class AccessibilityDataExtractor{
+
     companion object {
+        /**
+         * Finds the first node that matches the given condition.
+         * @param node The root node to start searching from.
+         * @param condition A lambda function that defines the condition to match.
+         * @return The first node that matches the condition, or null if no such node is found.
+         */
         fun First(
             node: AccessibilityNodeInfo?,
             condition: (node: AccessibilityNodeInfo) -> Boolean
@@ -19,12 +30,14 @@ class AccessibilityDataExtractor{
                 if (result != null)
                     return result
             }
-            return null;
+            return null
         }
-
-        //className: android.widget.TextView;[a-zA-Z: ; \[\] -_]+longClickable: true;[a-zA-Z: ; \[\] -_]+\n
-
-        //select nodes with condition
+        /**
+         * Selects all nodes that match the given condition.
+         * @param node The root node to start searching from.
+         * @param condition A lambda function that defines the condition to match.
+         * @return A list of nodes that match the condition.
+         */
         fun SelectNodes(
             node: AccessibilityNodeInfo?,
             condition: (node: AccessibilityNodeInfo) -> Boolean
@@ -39,7 +52,7 @@ class AccessibilityDataExtractor{
             for (i in 0 until node.childCount) {
                 result.addAll(SelectNodes(node.getChild(i), condition))
             }
-            return result;
+            return result
         }
     }
 }

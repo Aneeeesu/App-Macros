@@ -1,4 +1,4 @@
-package com.tenshite.inputmacros.facades
+package com.tenshite.inputmacros.Controllers
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -14,9 +14,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
 import kotlin.math.max
-import kotlin.math.min
 
-abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : AppFacadeBase(service) {
+abstract class ShortFormContentControllerBase(service: MyAccessibilityService) : AppControllerBase(service) {
     init {
         commands["SwipeDown"] = { bundle -> val pair =  swipeDown(bundle); pair.first + " " + pair.second}
         commands["SwipeUp"] = {bundle ->
@@ -40,9 +39,14 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
 
 
+    /**
+     * Swipes Down the screen and returns the content type and description
+     * @param bundle Bundle with dist argument, it is not mandatory but can be used to set the distance of the swipe, it is limited half of the screen height
+     * @return ContentType
+     */
     protected open suspend fun swipeDown(bundle: Bundle?) : Pair<String,String> {
         Log.d("ShortFormContentControllerBase", "SwipeDown")
-        val bounds = Rect();
+        val bounds = Rect()
         bounds.set(accessibilityService.screenBounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
@@ -57,7 +61,7 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
 
         endY = max(bounds.top.toFloat(),endY)
 
-
+        //prepare gesture
         path.moveTo(startX,startY)
         path.lineTo(startX,endY)
 
@@ -92,13 +96,18 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
             latch.await()
             delay(1000)
         }
-        return Pair(getContentType().toString(),getDescription());
+        return Pair(getContentType().toString(),getDescription())
     }
 
     protected abstract fun getDescription() : String
 
+    /**
+     * Swipes Up the screen and returns the content type and description
+     * @param bundle Bundle with dist argument, it is not mandatory but can be used to set the distance of the swipe, it is limited half of the screen height
+     * @return ContentType
+     */
     protected open suspend fun swipeUp(bundle: Bundle?) : Pair<String,String> {
-        val bounds = Rect();
+        val bounds = Rect()
         accessibilityService.rootInActiveWindow.getBoundsInScreen(bounds)
         val path = Path()
         val startX = bounds.centerX().toFloat()
@@ -108,11 +117,12 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
         var endY = bounds.bottom * 0.75f
 
         if(bundle != null && bundle.getFloat("dist") != 0.0f){
-            endY = bounds.bottom * 0.35f + bundle!!.getFloat("dist")
+            endY = bounds.bottom * 0.35f + bundle.getFloat("dist")
         }
 
         endY = max(bounds.top.toFloat(),endY)
 
+        //prepare gesture
         path.moveTo(startX,startY)
         path.lineTo(startX,endY)
 
@@ -145,7 +155,7 @@ abstract class ShortFormContentFacadeBase(service: MyAccessibilityService) : App
             latch.await()
             delay(300)
         }
-        return Pair(getContentType().toString(),getDescription());
+        return Pair(getContentType().toString(),getDescription())
     }
 }
 

@@ -13,8 +13,17 @@ import android.widget.Button
 import android.widget.TextView
 
 
+/** * Main activity for the application.
+ */
 class MainActivity : AppCompatActivity() {
 
+    /**
+     * Checks if the accessibility service is enabled.
+     *
+     * @param context The context of the application.
+     * @param serviceClassName The class name of the accessibility service.
+     * @return True if the accessibility service is enabled, false otherwise.
+     */
     fun isAccessibilityServiceEnabled(context: Context, serviceClassName: String): Boolean {
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,
@@ -32,6 +41,11 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    /**
+     * Prompts the user to enable the accessibility service.
+     *
+     * @param context The context of the application.
+     */
     fun promptUserToEnableAccessibility(context: Context) {
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -39,6 +53,10 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    /**
+     * Checks if the accessibility service is enabled and updates the UI accordingly.
+     * This method is called when the activity is resumed.
+     */
     override fun onResume() {
         super.onResume()
 
@@ -51,6 +69,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Called when the activity is created.
+     * Sets up the UI and initializes the accessibility service.
+     *
+     * @param savedInstanceState The saved instance state.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

@@ -11,27 +11,28 @@ import android.os.PowerManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
-import com.tenshite.inputmacros.controllers.AppControllerCollection
-import com.tenshite.inputmacros.facades.AccessibilityDataExtractor
-import com.tenshite.inputmacros.facades.InstagramContentFacade
-import com.tenshite.inputmacros.facades.InstagramNavigator
-import com.tenshite.inputmacros.facades.NovinkyCZContentfacade
-import com.tenshite.inputmacros.facades.TikTokContentFacade
+import com.tenshite.inputmacros.Controllers.AppControllerCollection
+import com.tenshite.inputmacros.Controllers.InstagramController
+import com.tenshite.inputmacros.Controllers.NovinkyCZController
+import com.tenshite.inputmacros.Controllers.TikTokController
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlin.random.Random
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Collections
 
+/**
+ * A accessibility service handling ADB inputs and performing their requests
+ */
 class MyAccessibilityService : AccessibilityService() {
     var cachedNodesInWindow = listOf<cachedNode>()
     var currentPackageName : String? = null
     var screenBounds : Rect = Rect()
     val eventFlow = MutableSharedFlow<Unit>()
 
+    /**
+     * The receiver for the broadcast intents
+     */
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if(intent?.action == "com.tenshite.inputmacros.printScreen"){
@@ -67,18 +68,17 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * The collection of app controllers
+     */
     private val appControllerCollection = AppControllerCollection()
 
-    private fun checkAd(){
-        val rootNode = rootInActiveWindow
-        Log.d("AdFinder","${getChildNodeWithText(rootNode,"Sponzorováno")!=null}");
-        //print content descriptions
-        printAllContentDescriptions(rootNode)
-
-        // Check if ad is present
-        val adNode = rootNode.findAccessibilityNodeInfosByViewId("com.tiktok.shortvideo:id/ad_container")
-    }
-
+    /**
+     * Finds the first node with the given text
+     * @param node The node to search in
+     * @param text The text to search for
+     * @return The first node with the given text, or null if not found
+     */
     private fun getChildNodeWithText(node: AccessibilityNodeInfo,text: CharSequence) : AccessibilityNodeInfo?{
         if(node.text != null && node.text.contains(text))
             return node
@@ -91,19 +91,28 @@ class MyAccessibilityService : AccessibilityService() {
         return null
     }
 
+    /**
+     * Prints all content descriptions of the node and its children
+     * @param node The node to print content descriptions for
+     */
     private fun printAllContentDescriptions(node: AccessibilityNodeInfo){
-        Log.d("AdFinderDetails", "${node.text?: "null"} ${node.contentDescription?.toString() ?: "null"}");
+        Log.d("AdFinderDetails", "${node.text?: "null"} ${node.contentDescription?.toString() ?: "null"}")
         for(i in 0 until node.childCount){
             printAllContentDescriptions(node.getChild(i))
         }
     }
 
+    /**
+     * Prepares the service
+     */
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
+        // get all the nodes
         cachedNodesInWindow = Collections.synchronizedList(mutableListOf<cachedNode>())
 
-
-        val job = GlobalScope.launch(Dispatchers.Default) {
+        // start the coroutine to get the nodes periodically
+        GlobalScope.launch(Dispatchers.Default) {
             while(true) {
                 val rootNode = rootInActiveWindow
                 cachedNodesInWindow =
@@ -112,16 +121,18 @@ class MyAccessibilityService : AccessibilityService() {
                 rootInActiveWindow?.getBoundsInScreen(screenBounds)
 
                 eventFlow.emit(Unit)
-                delay(200);
+                delay(200)
             }
         }
 
-        appControllerCollection.AddController(TikTokContentFacade(this))
-        appControllerCollection.AddController(InstagramContentFacade(this));
-        appControllerCollection.AddController(NovinkyCZContentfacade(this))
+        // add all the controllers
+        appControllerCollection.AddController(TikTokController(this))
+        appControllerCollection.AddController(InstagramController(this))
+        appControllerCollection.AddController(NovinkyCZController(this))
         val filter = appControllerCollection.getIntentFilter(packageName)
         filter.addAction("com.tenshite.inputmacros.printScreen")
         filter.addAction("com.tenshite.inputmacros.wakeup")
+        //register the receiver
         registerReceiver(
             receiver,
             filter,
@@ -129,8 +140,6 @@ class MyAccessibilityService : AccessibilityService() {
         )
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-    }
 
     // list all elements in the view
     private fun listAllElements(node: AccessibilityNodeInfo) {
@@ -143,21 +152,27 @@ class MyAccessibilityService : AccessibilityService() {
 
 
 
-    override fun onInterrupt() {
-        // Handle service interruption
-    }
-
+    /**
+     * Cleans up the service
+     */
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(receiver)
     }
 
+    override fun onAccessibilityEvent(p0: AccessibilityEvent?) {
+    }
+
+    override fun onInterrupt() {
+    }
+
+    /**
+     * Handles accessibility events
+     */
     fun clickNode(node: cachedNode?) {
         if (node == null) {
             return
         }
-
-        val randomIntInRange = Random.nextInt(5, 15)
 
         val bounds = node.bounds
 
@@ -175,6 +190,11 @@ class MyAccessibilityService : AccessibilityService() {
     }
 }
 
+/**
+ * A data class that caches the properties of an AccessibilityNodeInfo object.
+ * It allows way faster access to the properties of the node.
+ * @param node The AccessibilityNodeInfo object to cache.
+ */
 class cachedNode(node: AccessibilityNodeInfo) {
     val text = node.text
     val contentDescription = node.contentDescription
